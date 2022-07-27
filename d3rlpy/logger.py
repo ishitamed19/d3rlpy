@@ -10,6 +10,8 @@ import structlog
 from tensorboardX import SummaryWriter
 from typing_extensions import Protocol
 
+import wandb
+
 
 class _SaveProtocol(Protocol):
     def save_model(self, fname: str) -> None:
@@ -48,6 +50,7 @@ class D3RLPyLogger:
         root_dir: str = "logs",
         verbose: bool = True,
         with_timestamp: bool = True,
+        use_wandb: bool = False,
     ):
         self._save_metrics = save_metrics
         self._verbose = verbose
@@ -82,6 +85,21 @@ class D3RLPyLogger:
             self._writer = SummaryWriter(logdir=tfboard_path)
         else:
             self._writer = None
+
+        self._use_wandb = use_wandb
+        if use_wandb:
+            # configure wandb
+            with open("/private/home/ishitamed/wandb_info.txt") as file:
+                lines = [line.rstrip() for line in file]
+            os.environ["WANDB_BASE_URL"] = lines[0]
+            os.environ["WANDB_API_KEY"] = lines[1]
+            os.environ["WANDB_START_METHOD"] = "thread"
+            wandb_group = self._experiment_name[:-2][:126] # '-'.join(args.xpid.split('-')[:-2])[:120]
+            wandb_project = "OfflineBC"
+            wandb.init(project=wandb_project, 
+                    entity=lines[2],
+                    name=self._experiment_name, 
+                    group=wandb_group)
 
         self._params = None
 
@@ -146,6 +164,9 @@ class D3RLPyLogger:
 
         # initialize metrics buffer
         self._metrics_buffer = {}
+
+        if self._use_wandb:
+            wandb.log(metrics)
         return metrics
 
     def save_model(self, epoch: int, algo: _SaveProtocol) -> None:
@@ -158,6 +179,9 @@ class D3RLPyLogger:
     def close(self) -> None:
         if self._writer:
             self._writer.close()
+
+        if self._use_wandb:
+            wandb.finish()
 
     @contextmanager
     def measure_time(self, name: str) -> Iterator[None]:

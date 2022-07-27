@@ -8,6 +8,10 @@ from ..dataset import Episode, TransitionMiniBatch
 from ..preprocessing.reward_scalers import RewardScaler
 from ..preprocessing.stack import StackedObservation
 
+from procgen import ProcgenEnv
+from baselines.common.vec_env import VecExtractDictObs
+from ..preprocessing.vec_pytorch_procgen import VecPyTorchProcgen
+
 WINDOW_SIZE = 1024
 
 
@@ -576,3 +580,61 @@ def dynamics_prediction_variance_scorer(
             pred = cast(Tuple[np.ndarray, np.ndarray, np.ndarray], pred)
             total_variances += pred[2].tolist()
     return float(np.mean(total_variances))
+
+def evaluate_on_procgen_environment(
+    env_name: str, num_levels: int = 0, start_level: int = 0, n_trials: int = 10, epsilon: float = 0.0, render: bool = False
+) -> Callable[..., float]:
+
+    venv = ProcgenEnv(num_envs=1, env_name=env_name, num_levels=num_levels, start_level=start_level, distribution_mode="easy")
+    venv = VecExtractDictObs(venv, "rgb")
+    # venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
+    # venv = VecNormalize(venv=venv, ob=False)
+    env = VecPyTorchProcgen(venv, "cuda")
+
+    # for image observation
+    observation_shape = env.observation_space.shape
+    is_image = len(observation_shape) == 3
+
+    def scorer(algo: AlgoProtocol, *args: Any) -> float:
+        if is_image:
+            stacked_observation = StackedObservation(
+                observation_shape, algo.n_frames
+            )
+
+        episode_rewards = []
+        for _ in range(n_trials):
+            observation = env.reset()
+            episode_reward = 0.0
+
+            # frame stacking
+            if is_image:
+                stacked_observation.clear()
+                stacked_observation.append(observation)
+
+            while True:
+                # take action
+                if np.random.random() < epsilon:
+                    action = env.action_space.sample()
+                else:
+                    if is_image:
+                        action = algo.predict([stacked_observation.eval()])[0]
+                    else:
+                        action = algo.predict([observation])[0]
+
+                observation, reward, done, _ = env.step(action)
+                episode_reward += reward
+
+                if is_image:
+                    stacked_observation.append(observation)
+
+                if render:
+                    env.render()
+
+                if done:
+                    break
+            episode_rewards.append(episode_reward)
+
+        env.close()
+        return float(np.mean(episode_rewards))
+
+    return scorer
