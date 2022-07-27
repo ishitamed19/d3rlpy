@@ -94,7 +94,7 @@ class D3RLPyLogger:
             os.environ["WANDB_BASE_URL"] = lines[0]
             os.environ["WANDB_API_KEY"] = lines[1]
             os.environ["WANDB_START_METHOD"] = "thread"
-            wandb_group = self._experiment_name[:-2][:126] # '-'.join(args.xpid.split('-')[:-2])[:120]
+            wandb_group = self._experiment_name[:-2] # '-'.join(args.xpid.split('-')[:-2])[:120]
             wandb_project = "OfflineBC"
             wandb.init(project=wandb_project, 
                     entity=lines[2],
