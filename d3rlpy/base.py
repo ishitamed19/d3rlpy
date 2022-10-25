@@ -1,3 +1,4 @@
+from argparse import Namespace
 import copy
 import json
 from abc import ABCMeta, abstractmethod
@@ -362,6 +363,7 @@ class LearnableBase:
         tensorboard_dir: Optional[str] = None,
         eval_episodes: Optional[List[Episode]] = None,
         save_interval: int = 1,
+        wandb_args: Namespace = None,
         scorers: Optional[
             Dict[str, Callable[[Any, List[Episode]], float]]
         ] = None,
@@ -420,6 +422,7 @@ class LearnableBase:
                 use_wandb,
                 eval_episodes,
                 save_interval,
+                wandb_args,
                 scorers,
                 shuffle,
                 callback,
@@ -443,6 +446,7 @@ class LearnableBase:
         use_wandb: bool = False,
         eval_episodes: Optional[List[Episode]] = None,
         save_interval: int = 1,
+        wandb_args: Namespace = None,
         scorers: Optional[
             Dict[str, Callable[[Any, List[Episode]], float]]
         ] = None,
@@ -554,6 +558,7 @@ class LearnableBase:
             verbose,
             tensorboard_dir,
             use_wandb,
+            wandb_args,
         )
 
         # add reference to active logger to algo class during fit
@@ -781,6 +786,7 @@ class LearnableBase:
         verbose: bool,
         tensorboard_dir: Optional[str],
         use_wandb: bool,
+        wandb_args: Namespace,
     ) -> D3RLPyLogger:
         if experiment_name is None:
             experiment_name = self.__class__.__name__
@@ -793,6 +799,7 @@ class LearnableBase:
             tensorboard_dir=tensorboard_dir,
             with_timestamp=with_timestamp,
             use_wandb=use_wandb,
+            wandb_args=wandb_args,
         )
 
         return logger

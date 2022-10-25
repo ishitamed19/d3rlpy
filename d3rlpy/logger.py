@@ -4,6 +4,7 @@ import time
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Any, Dict, Iterator, List, Optional
+from argparse import Namespace
 
 import numpy as np
 import structlog
@@ -51,6 +52,7 @@ class D3RLPyLogger:
         verbose: bool = True,
         with_timestamp: bool = True,
         use_wandb: bool = False,
+        wandb_args: Namespace = None,
     ):
         self._save_metrics = save_metrics
         self._verbose = verbose
@@ -95,11 +97,12 @@ class D3RLPyLogger:
             os.environ["WANDB_API_KEY"] = lines[1]
             os.environ["WANDB_START_METHOD"] = "thread"
             wandb_group = self._experiment_name[:-2] # '-'.join(args.xpid.split('-')[:-2])[:120]
-            wandb_project = "OfflineBC"
+            wandb_project = "PPO_Offline_Procgen"
             wandb.init(project=wandb_project, 
                     entity=lines[2],
                     name=self._experiment_name, 
-                    group=wandb_group)
+                    group=wandb_group,
+                    config=wandb_args)
 
         self._params = None
 
