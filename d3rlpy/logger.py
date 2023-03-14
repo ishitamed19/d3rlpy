@@ -102,7 +102,8 @@ class D3RLPyLogger:
                     entity=lines[2],
                     name=self._experiment_name, 
                     group=wandb_group,
-                    config=wandb_args)
+                    config=wandb_args,
+                    tags=[wandb_args.wandb_tags])
 
         self._params = None
 
